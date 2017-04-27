@@ -17,7 +17,7 @@ repositories {
 
 spongestart {
     eula true
-    spongeForgeVersion "1.10.2-2254-5.2.0-BETA-2259"
+    spongeForgeVersion "1.10.2-2281-5.2.0-BETA-2274"
 }
 
 configurations {

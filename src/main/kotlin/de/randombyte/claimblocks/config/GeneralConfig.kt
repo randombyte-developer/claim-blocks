@@ -24,9 +24,8 @@ class GeneralConfig(
     )
 
     constructor() : this(ranges = mapOf(
-            BlockTypes.STANDING_SIGN.defaultState to 1,
             BlockTypes.COAL_BLOCK.defaultState to 1,
-            BlockTypes.IRON_BLOCK.defaultState to 10,
-            BlockTypes.GOLD_ORE.defaultState to 50
+            BlockTypes.IRON_BLOCK.defaultState to 5,
+            BlockTypes.GOLD_ORE.defaultState to 45
     ))
 }

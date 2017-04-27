@@ -25,6 +25,7 @@ import org.spongepowered.api.entity.living.player.Player
 import org.spongepowered.api.entity.living.player.User
 import org.spongepowered.api.event.Listener
 import org.spongepowered.api.event.block.ChangeBlockEvent
+import org.spongepowered.api.event.filter.Getter
 import org.spongepowered.api.event.filter.cause.Root
 import org.spongepowered.api.event.game.GameReloadEvent
 import org.spongepowered.api.event.game.state.GameInitializationEvent
@@ -148,7 +149,17 @@ class ClaimBlocks @Inject constructor(
     }
 
     @Listener
-    fun onCrossBorderClaimEvent(event: BorderClaimEvent) {
+    fun onCrossBorderClaimEvent(event: BorderClaimEvent, @Getter("getTargetEntity") player: Player) {
+        val exitClaim = event.exitClaim
+        val enterClaim = event.enterClaim
+
+        if (enterClaim.isWilderness) {
+            val text = config.messages.exitClaim.apply(mapOf("claimOwner" to exitClaim.ownerName)).build()
+            event.setExitMessage(text)
+        } else {
+            val text = config.messages.enterClaim.apply(mapOf("claimOwner" to enterClaim.ownerName)).build()
+            event.setEnterMessage(text)
+        }
     }
 
     private fun loadClaimManager() {
@@ -165,5 +176,6 @@ class ClaimBlocks @Inject constructor(
 
     private fun loadConfig() {
         config = generalConfigManager.get()
+        generalConfigManager.save(config) // regenerate config
     }
 }
