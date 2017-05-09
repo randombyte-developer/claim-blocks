@@ -1,21 +1,21 @@
 package de.randombyte.claimblocks
 
 import com.google.inject.Inject
+import de.randombyte.claimblocks.ClaimBlocks.Companion.FOX_GUARD_ID
 import de.randombyte.claimblocks.ClaimBlocks.Companion.GRIEF_PREVENTION_ID
 import de.randombyte.claimblocks.config.DatabaseConfig
 import de.randombyte.claimblocks.config.GeneralConfig
 import de.randombyte.claimblocks.config.WorldTypeSerializer
 import de.randombyte.claimblocks.regions.ClaimManager
-import de.randombyte.claimblocks.regions.GriefPreventionClaimManager
+import de.randombyte.claimblocks.regions.FoxGuardClaimManager
 import de.randombyte.kosp.bstats.BStats
 import de.randombyte.kosp.config.ConfigManager
 import de.randombyte.kosp.extensions.green
 import de.randombyte.kosp.extensions.red
 import de.randombyte.kosp.extensions.typeToken
 import de.randombyte.kosp.extensions.yellow
-import de.randombyte.kosp.getServiceOrFail
-import me.ryanhamshire.griefprevention.api.GriefPreventionApi
-import me.ryanhamshire.griefprevention.api.event.BorderClaimEvent
+import net.foxdenstudio.sponge.foxguard.plugin.FGManager
+import net.foxdenstudio.sponge.foxguard.plugin.`object`.factory.FGFactoryManager
 import ninja.leaping.configurate.hocon.HoconConfigurationLoader
 import org.slf4j.Logger
 import org.spongepowered.api.Sponge
@@ -25,7 +25,6 @@ import org.spongepowered.api.entity.living.player.Player
 import org.spongepowered.api.entity.living.player.User
 import org.spongepowered.api.event.Listener
 import org.spongepowered.api.event.block.ChangeBlockEvent
-import org.spongepowered.api.event.filter.Getter
 import org.spongepowered.api.event.filter.cause.Root
 import org.spongepowered.api.event.game.GameReloadEvent
 import org.spongepowered.api.event.game.state.GameInitializationEvent
@@ -41,7 +40,8 @@ import java.nio.file.Path
         version = ClaimBlocks.VERSION,
         authors = arrayOf(ClaimBlocks.AUTHOR),
         dependencies = arrayOf(
-                Dependency(id = GRIEF_PREVENTION_ID, optional = true)))
+                Dependency(id = GRIEF_PREVENTION_ID, optional = true),
+                Dependency(id = FOX_GUARD_ID, optional = true)))
 class ClaimBlocks @Inject constructor(
         val logger: Logger,
         @ConfigDir(sharedRoot = false) configPath: Path,
@@ -55,6 +55,7 @@ class ClaimBlocks @Inject constructor(
         const val AUTHOR = "RandomByte"
 
         const val GRIEF_PREVENTION_ID = "griefprevention"
+        const val FOX_GUARD_ID = "foxguard"
 
         const val ROOT_PERMISSION = ID
     }
@@ -85,7 +86,10 @@ class ClaimBlocks @Inject constructor(
 
     @Listener
     fun onInit(event: GameInitializationEvent) {
-        loadClaimManager()
+        if (!loadClaimManager()) {
+            Sponge.getEventManager().unregisterPluginListeners(this)
+            throw RuntimeException("No supported region plugin(GriefPrevention) is available! ClaimBlocks won't be usable!")
+        }
 
         loadConfig()
 
@@ -104,7 +108,7 @@ class ClaimBlocks @Inject constructor(
         if (!player.hasPermission("$ROOT_PERMISSION.use")) return
         event.transactions
                 .filter { isClaimBlock(it.final.state) }
-                .map { it.final.location.get() to getRange(it.final.state) }
+                .map { it.final.location.get() to getRange(it.final.state)!! }
                 .forEach { (location, range) ->
                     val centerPosition = location.blockPosition
                     val cornerA = centerPosition.add(range, range, range)
@@ -148,31 +152,26 @@ class ClaimBlocks @Inject constructor(
                 }
     }
 
-    @Listener
-    fun onCrossBorderClaimEvent(event: BorderClaimEvent, @Getter("getTargetEntity") player: Player) {
-        val exitClaim = event.exitClaim
-        val enterClaim = event.enterClaim
-
-        if (enterClaim.isWilderness) {
-            val text = config.messages.exitClaim.apply(mapOf("claimOwner" to exitClaim.ownerName)).build()
-            event.setExitMessage(text)
-        } else {
-            val text = config.messages.enterClaim.apply(mapOf("claimOwner" to enterClaim.ownerName)).build()
-            event.setEnterMessage(text)
+    private fun loadClaimManager(): Boolean {
+        if (Sponge.getPluginManager().getPlugin(FOX_GUARD_ID).isPresent) {
+            claimManager = FoxGuardClaimManager(FGManager.getInstance(), FGFactoryManager.getInstance())
+            return true
         }
-    }
 
-    private fun loadClaimManager() {
-        if (Sponge.getPluginManager().getPlugin(GRIEF_PREVENTION_ID).isPresent) {
+/*        if (Sponge.getPluginManager().getPlugin(GRIEF_PREVENTION_ID).isPresent) {
             claimManager = GriefPreventionClaimManager(pluginContainer, getServiceOrFail(GriefPreventionApi::class))
-            return
-        }
+            Sponge.getEventManager().registerListeners(this, GriefPreventionCrossBorderClaimListener(
+                    getEnterTextTemplate = config.messages::enterClaim,
+                    getExitTextTemplate = config.messages::exitClaim
+            ))
+            return true
+        }*/
 
-        throw RuntimeException("No supported region plugin(GriefPrevention) is available! ClaimBlocks won't be usable!")
+        return false
     }
 
     private fun isClaimBlock(blockState: BlockState) = config.ranges.containsKey(blockState)
-    private fun getRange(blockState: BlockState) = config.ranges.getValue(blockState)
+    private fun getRange(blockState: BlockState): Int? = config.ranges.get(blockState)
 
     private fun loadConfig() {
         config = generalConfigManager.get()

@@ -29,7 +29,9 @@ dependencies {
     shadow "org.jetbrains.kotlin:kotlin-stdlib-jre8:1.1.1"
     kapt "org.spongepowered:spongeapi:5.1.0"
     shadow("com.github.randombyte-developer.kosp:kosp:v0.3.12.1") { transitive = false }
-    compile files("run/forge/mods/gp.jar")
+    compile files("mods/gp.jar") // griefprevention
+    compile files("mods/fg.jar") // foxguard
+    compile files("mods/fc.jar") // foxcore
 }
 
 jar.enabled = false
