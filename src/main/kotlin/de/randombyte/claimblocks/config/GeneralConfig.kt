@@ -6,14 +6,15 @@ import de.randombyte.kosp.extensions.toArg
 import de.randombyte.kosp.fixedTextTemplateOf
 import ninja.leaping.configurate.objectmapping.Setting
 import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable
-import org.spongepowered.api.block.BlockState
-import org.spongepowered.api.block.BlockTypes
+import org.spongepowered.api.block.BlockType
+import org.spongepowered.api.block.BlockTypes.*
 import org.spongepowered.api.text.TextTemplate
 
 @ConfigSerializable
-class GeneralConfig(
+internal class GeneralConfig(
         @Setting val messages: Messages = Messages(),
-        @Setting val ranges: Map<BlockState, Int> = emptyMap()
+        @Setting val beaconsEnabled: Boolean = true,
+        @Setting val ranges: List<Range> = emptyList()
 ) {
     @ConfigSerializable
     class Messages(
@@ -23,9 +24,15 @@ class GeneralConfig(
                     "claimOwner".toArg().aqua(),"'!")
     )
 
-    constructor() : this(ranges = mapOf(
-            BlockTypes.COAL_BLOCK.defaultState to 1,
-            BlockTypes.IRON_BLOCK.defaultState to 5,
-            BlockTypes.GOLD_ORE.defaultState to 45
+    @ConfigSerializable
+    class Range(
+            @Setting val block: BlockType = AIR,
+            @Setting val range: Int = -1
+    )
+
+    constructor() : this(ranges = listOf(
+            Range(COAL_BLOCK, range = 1),
+            Range(IRON_BLOCK, range = 5),
+            Range(GOLD_ORE, range = 45)
     ))
 }
