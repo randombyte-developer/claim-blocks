@@ -18,7 +18,6 @@ import me.ryanhamshire.griefprevention.api.GriefPreventionApi
 import ninja.leaping.configurate.hocon.HoconConfigurationLoader
 import org.slf4j.Logger
 import org.spongepowered.api.Sponge
-import org.spongepowered.api.block.BlockSnapshot
 import org.spongepowered.api.block.BlockType
 import org.spongepowered.api.block.BlockTypes.*
 import org.spongepowered.api.block.tileentity.carrier.Beacon
@@ -29,9 +28,7 @@ import org.spongepowered.api.entity.living.player.Player
 import org.spongepowered.api.entity.living.player.User
 import org.spongepowered.api.event.Listener
 import org.spongepowered.api.event.block.ChangeBlockEvent
-import org.spongepowered.api.event.block.TickBlockEvent
 import org.spongepowered.api.event.cause.Cause
-import org.spongepowered.api.event.filter.Getter
 import org.spongepowered.api.event.filter.cause.Root
 import org.spongepowered.api.event.game.GameReloadEvent
 import org.spongepowered.api.event.game.state.GameInitializationEvent
@@ -39,6 +36,7 @@ import org.spongepowered.api.item.inventory.ItemStack
 import org.spongepowered.api.plugin.Dependency
 import org.spongepowered.api.plugin.Plugin
 import org.spongepowered.api.plugin.PluginContainer
+import org.spongepowered.api.scheduler.Task
 import org.spongepowered.api.world.Location
 import org.spongepowered.api.world.World
 import java.nio.file.Files
@@ -60,7 +58,7 @@ class ClaimBlocks @Inject constructor(
     internal companion object {
         const val ID = "claim-blocks"
         const val NAME = "ClaimBlocks"
-        const val VERSION = "0.1"
+        const val VERSION = "0.2"
         const val AUTHOR = "RandomByte"
 
         const val GRIEF_PREVENTION_ID = "griefprevention"
@@ -69,6 +67,7 @@ class ClaimBlocks @Inject constructor(
         const val ROOT_PERMISSION = ID
 
         val BEACON_BASE_BLOCKS = listOf(IRON_BLOCK, GOLD_BLOCK, DIAMOND_BLOCK, EMERALD_BLOCK)
+        private fun BlockType.isBeaconBaseBlock() = BEACON_BASE_BLOCKS.contains(this)
     }
 
     init {
@@ -114,6 +113,14 @@ class ClaimBlocks @Inject constructor(
         logger.info("Reloaded!")
     }
 
+    private fun loadConfig() {
+        config = generalConfigManager.get()
+        generalConfigManager.save(config) // regenerate config
+    }
+
+    /**
+     * Takes action when placing claim blocks, beacon and beacon base blocks.
+     */
     @Listener
     fun onPlaceBlock(event: ChangeBlockEvent.Place, @Root player: Player) {
         if (!player.hasPermission("$ROOT_PERMISSION.use")) return
@@ -124,42 +131,32 @@ class ClaimBlocks @Inject constructor(
             if (isRegisteredClaimBlock(final.state.type)) {
                 val range = getRange(final.state.type)!!
                 if (range > 0 && !createClaim(location, range, listOf(player))) event.isCancelled = true
+            } else if (config.beaconsEnabled && final.state.type == BEACON) {
+                executeAfterBeaconBlockUpdate {
+                    if (location.tileEntity.isPresent) {
+                        val beacon = location.tileEntity.get() as Beacon
+                        registerBeaconBlock(beacon, listOf(player))
+                    }
+                }
+            } else if (final.state.type.isBeaconBaseBlock()) {
+                executeAfterBeaconBlockUpdate {
+                    getBeaconsInRange(location, 10).forEach { beacon -> checkBeacon(beacon, listOf(player)) }
+                }
             }
-
-            // beacon placement isn't handled directly; onTickBeaconBlock() does the job
-        }
-    }
-
-    /**
-     * Called when a [BEACON] ticks. This might cause an update of [Beacon.getCompletedLevels]
-     * which leads to invalidating the beacon block -> it will be dropped and the claim gets removed
-     */
-    @Listener
-    fun onTickBeaconBlock(event: TickBlockEvent, @Getter("getTargetBlock") blockSnapshot: BlockSnapshot) {
-        if (blockSnapshot.state.type != BEACON) return
-        val location = blockSnapshot.location.get()
-        val playersAround = location.extent.entities
-                .filter { it is Player }
-                .map { it to it.location.blockPosition.distance(location.blockPosition) }
-                .filter { (_, distance) -> distance < 8 }
-                .sortedBy { (_, distance) -> distance }
-                .map { it as Player }
-
-        val beacon = location.tileEntity as Beacon
-        if (claimBlocksConfigManager.get().getRange(location) == null) {
-            // not yet registered
-            registerBeaconBlock(beacon, playersAround)
-        } else {
-            // already registered -> check range
-            checkBeacon(beacon, playersAround)
         }
     }
 
     private fun registerBeaconBlock(beacon: Beacon, players: List<Player>) {
         val range = beacon.getRange()
-        if (range > 0 && !createClaim(beacon.location, range, players)) {
-            // didn't work -> remove beacon and drop item
+        if (range > 0) {
+            if (!createClaim(beacon.location, range, players)) {
+                // didn't work -> remove beacon and drop item
+                destroyAndDropBlock(beacon.location)
+            }
+        } else {
+            // no beacon pyramid underneath
             destroyAndDropBlock(beacon.location)
+            players.forEach { it.sendMessage("The base of the beacon block has to be completed at first!".yellow()) }
         }
     }
 
@@ -181,7 +178,7 @@ class ClaimBlocks @Inject constructor(
     }
 
     /**
-     * Sends the [player] a message when the given region overlaps with a registered claim.
+     * Sends the [players] a message when the given region overlaps with a registered claim.
      *
      * @return true if overlaps with other region(s), false if not
      */
@@ -196,6 +193,9 @@ class ClaimBlocks @Inject constructor(
         return false
     }
 
+    /**
+     * Takes action when a claim block, a beacon or a beacon base block is broken.
+     */
     @Listener
     fun onBreakBlock(event: ChangeBlockEvent.Break) {
         event.transactions
@@ -203,21 +203,18 @@ class ClaimBlocks @Inject constructor(
                     val original = transaction.original
                     val location = original.location.get()
                     val player = event.cause.first(Player::class.java).orNull()
+                    val players = if (player == null) emptyList() else listOf(player)
 
                     val isRegistered = claimBlocksConfigManager.get().getRange(location) != null
 
                     if (isRegistered && (isRegisteredClaimBlock(original.state.type) || original.state.type == BEACON)) {
-                        removeClaim(location, if (player == null) emptyList() else listOf(player))
+                        removeClaim(location, players)
                         return
-                    }/* else if (original.state.type.isBeaconBaseBlock()) {
-                        getBeaconsInRange(location, 20).forEach { beacon ->
-                            val stillValid = checkBeacon(beacon, player)
-                            if (!stillValid) {
-                                player?.sendMessage("Removed claim: A beacon was destroyed!".yellow())
-                            }
+                    } else if (original.state.type.isBeaconBaseBlock()) {
+                        executeAfterBeaconBlockUpdate {
+                            getBeaconsInRange(location, 10).forEach { beacon -> checkBeacon(beacon, players) }
                         }
-                    }*/
-
+                    }
                 }
     }
 
@@ -234,7 +231,7 @@ class ClaimBlocks @Inject constructor(
 
     /**
      * Checks if the range of the beacon is the same as the range it was registered with; if they
-     * don't equal the Beacon gets dropped to the ground.
+     * don't equal the Beacon gets dropped to the ground. This method never registers beacons.
      *
      * @return true if everything is okay, false if it was destroyed because it was invalid
      */
@@ -265,7 +262,7 @@ class ClaimBlocks @Inject constructor(
     private fun destroyAndDropBlock(location: Location<World>) {
         val blockType = location.block.type.item.orElseThrow { IllegalArgumentException("${location.block.type} doesn't have an item type!") }
         // break
-        location.setBlock(AIR.defaultState, Cause.source(this).build())
+        location.setBlock(AIR.defaultState, Cause.source(pluginContainer).build())
         //drop
         val itemEntity = location.extent.createEntity(EntityTypes.ITEM, location.blockPosition)
         itemEntity.offer(Keys.REPRESENTED_ITEM, ItemStack.of(blockType, 1).createSnapshot())
@@ -290,8 +287,8 @@ class ClaimBlocks @Inject constructor(
         return false
     }
 
-    private fun isRegisteredClaimBlock(blockType: BlockType) = config.ranges.any { it.block == blockType }
-    private fun getRange(blockType: BlockType): Int? = config.ranges.first { it.block == blockType }.range
+    private fun getRange(blockType: BlockType): Int? = config.ranges.firstOrNull { it.block == blockType }?.range
+    private fun isRegisteredClaimBlock(blockType: BlockType) = getRange(blockType) != null
 
     private fun getClaimCorners(center: Vector3i, range: Int) = center.add(range, range, range) to center.sub(range, range, range)
 
@@ -301,7 +298,7 @@ class ClaimBlocks @Inject constructor(
         val cornerB = centerPosition.add(range, range, range)
 
         val beaconBlocks = (cornerA..cornerB).mapNotNull { position ->
-            location.extent.getTileEntity(position) as? Beacon
+            location.extent.getTileEntity(position).orNull() as? Beacon
         }
 
         return beaconBlocks
@@ -309,10 +306,12 @@ class ClaimBlocks @Inject constructor(
 
     private fun Beacon.getRange() = completedLevels.let { lvl -> if (lvl > 0) lvl * 10 + 10 else 0 }
 
-    private fun BlockType.isBeaconBaseBlock() = BEACON_BASE_BLOCKS.contains(this)
-
-    private fun loadConfig() {
-        config = generalConfigManager.get()
-        generalConfigManager.save(config) // regenerate config
-    }
+    /**
+     * This is needed to ensure that the [Beacon] has updated its [Beacon.getCompletedLevels] before
+     * accessing it. The update occurs each ticke where `worldTime % 80 == 0` is true.
+     */
+    private fun executeAfterBeaconBlockUpdate(action: () -> Unit) = Task.builder()
+            .delayTicks(81) // the update time of beacon blocks is roughly 80 ticks
+            .execute(action)
+            .submit(this)
 }

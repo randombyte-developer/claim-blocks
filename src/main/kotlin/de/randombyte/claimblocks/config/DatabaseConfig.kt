@@ -8,16 +8,25 @@ import org.spongepowered.api.world.World
 
 @ConfigSerializable
 internal data class DatabaseConfig(
-        @Setting val locations: Map<World, List<Vector3i>> = emptyMap()
+        @Setting val locations: Map<World, List<Claim>> = emptyMap()
 ) {
 
-    fun addPosition(location: Location<World>): DatabaseConfig =
-            copy(locations = locations.plus(location.extent to ((this.locations[location.extent] ?: emptyList<Vector3i>()).plus(location.blockPosition)).uniqueElements()))
+    // we have to do it this way and not Map<Vector3i, Int> because of SpongeCommon/1346
+    @ConfigSerializable
+    class Claim(
+            @Setting val position: Vector3i = Vector3i.ONE.negate(),
+            @Setting val range: Int = -1
+    )
 
-    fun removePosition(location: Location<World>): DatabaseConfig =
-            copy(locations = locations.plus(location.extent to ((this.locations[location.extent] ?: emptyList<Vector3i>()).minus(location.blockPosition)).uniqueElements()))
+    fun addPosition(location: Location<World>, range: Int): DatabaseConfig = copy(locations = locations
+            .plus(location.extent to
+                    (this.locations[location.extent] ?: emptyList<Claim>())
+                            .plus(Claim(location.blockPosition, range))))
 
-    fun contains(location: Location<World>) = locations[location.extent]?.contains(location.blockPosition) ?: false
+    fun getRange(location: Location<World>): Int? = locations[location.extent]?.firstOrNull { it.position == location.blockPosition }?.range
 
-    private fun <T> List<T>.uniqueElements() = toSet().toList()
+    fun removePosition(location: Location<World>): DatabaseConfig = copy(locations = locations
+            .plus(location.extent to
+                    (this.locations[location.extent] ?: emptyList<Claim>())
+                            .filterNot { it.position == location.blockPosition }))
 }
