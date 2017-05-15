@@ -7,7 +7,7 @@ plugins {
 }
 
 group "de.randombyte"
-version "0.2"
+version "0.3"
 
 repositories {
     jcenter()
@@ -30,6 +30,7 @@ dependencies {
     kapt "org.spongepowered:spongeapi:5.1.0"
     shadow("com.github.randombyte-developer.kosp:kosp:v0.3.12.1") { transitive = false }
     compile files("mods/gp.jar") // griefprevention
+    compile files("mods/rp.jar") // griefprevention
     compile files("mods/fg.jar") // foxguard
     compile(files("mods/fc.jar")) // foxcore
 }

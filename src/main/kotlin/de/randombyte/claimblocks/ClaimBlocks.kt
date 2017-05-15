@@ -9,6 +9,7 @@ import de.randombyte.claimblocks.config.GeneralConfig
 import de.randombyte.claimblocks.config.WorldTypeSerializer
 import de.randombyte.claimblocks.regions.ClaimManager
 import de.randombyte.claimblocks.regions.GriefPreventionClaimManager
+import de.randombyte.claimblocks.regions.RedProtectClaimManager
 import de.randombyte.claimblocks.regions.crossborderevent.GriefPreventionCrossBorderClaimListener
 import de.randombyte.kosp.bstats.BStats
 import de.randombyte.kosp.config.ConfigManager
@@ -58,11 +59,12 @@ class ClaimBlocks @Inject constructor(
     internal companion object {
         const val ID = "claim-blocks"
         const val NAME = "ClaimBlocks"
-        const val VERSION = "0.2"
+        const val VERSION = "0.3"
         const val AUTHOR = "RandomByte"
 
         const val GRIEF_PREVENTION_ID = "griefprevention"
         const val FOX_GUARD_ID = "foxguard"
+        const val RED_PROTECT_ID = "redprotect"
 
         const val ROOT_PERMISSION = ID
 
@@ -100,7 +102,7 @@ class ClaimBlocks @Inject constructor(
 
         if (!loadClaimManager()) {
             Sponge.getEventManager().unregisterPluginListeners(this)
-            throw RuntimeException("No supported region plugin(GriefPrevention) is available! ClaimBlocks won't be usable!")
+            throw RuntimeException("No supported region plugin(GriefPrevention, RedProtect) is available! ClaimBlocks won't be usable!")
         }
 
         logger.info("$NAME loaded: $VERSION")
@@ -281,6 +283,11 @@ class ClaimBlocks @Inject constructor(
                     getEnterTextTemplate = config.messages::enterClaim,
                     getExitTextTemplate = config.messages::exitClaim
             ))
+            return true
+        }
+
+        if (Sponge.getPluginManager().getPlugin(RED_PROTECT_ID).isPresent) {
+            claimManager = RedProtectClaimManager()
             return true
         }
 
