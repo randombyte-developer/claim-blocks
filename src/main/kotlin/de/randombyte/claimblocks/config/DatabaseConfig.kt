@@ -6,6 +6,10 @@ import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable
 import org.spongepowered.api.world.Location
 import org.spongepowered.api.world.World
 
+/**
+ * This config registers the range of the claim in general but the range values are only read to
+ * check if beacons changed their level.
+ */
 @ConfigSerializable
 internal data class DatabaseConfig(
         @Setting val locations: Map<World, List<Claim>> = emptyMap()

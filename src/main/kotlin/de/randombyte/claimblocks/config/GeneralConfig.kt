@@ -13,8 +13,8 @@ import org.spongepowered.api.text.TextTemplate
 @ConfigSerializable
 internal class GeneralConfig(
         @Setting val messages: Messages = Messages(),
-        @Setting val beaconsEnabled: Boolean = true,
-        @Setting val ranges: List<Range> = emptyList()
+        @Setting val ranges: List<Range> = emptyList(),
+        @Setting val beacons: Beacons = GeneralConfig.Beacons()
 ) {
     @ConfigSerializable
     class Messages(
@@ -27,12 +27,19 @@ internal class GeneralConfig(
     @ConfigSerializable
     class Range(
             @Setting val block: BlockType = AIR,
-            @Setting val range: Int = -1
+            @Setting val horizontalRange: Int = -1,
+            @Setting(comment = "-1 for max. height") val verticalRange: Int = -1
+    )
+
+    @ConfigSerializable
+    class Beacons(
+            @Setting val enabled: Boolean = true,
+            @Setting(comment = "-1 for max. height; 0 for default beacon range") val verticalRange: Int = 0
     )
 
     constructor() : this(ranges = listOf(
-            Range(COAL_BLOCK, range = 1),
-            Range(IRON_BLOCK, range = 5),
-            Range(GOLD_ORE, range = 45)
+            Range(COAL_BLOCK, horizontalRange = 1, verticalRange = 1),
+            Range(IRON_BLOCK, horizontalRange = 5, verticalRange = 5),
+            Range(GOLD_ORE, horizontalRange = 45, verticalRange = 45)
     ))
 }
