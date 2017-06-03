@@ -33,3 +33,16 @@ internal class Vector3iRange(override val start: Vector3i, override val endInclu
         }
     }
 }
+
+internal fun Vector3i.copy(newX: Int = x, newY: Int = y, newZ: Int = z) = Vector3i(newX, newY, newZ)
+
+/**
+ * If [verticalRange] is less than 0 the corners are set to cover all the area from bedrock to the max build height.
+ */
+internal fun getClaimCorners(center: Vector3i, horizontalRange: Int, verticalRange: Int): Pair<Vector3i, Vector3i> {
+    if (verticalRange < 0) {
+        val (cornerA, cornerB) = getClaimCorners(center, horizontalRange, 0)
+        return cornerA.copy(newY = 0) to cornerB.copy(newY = 256)
+    }
+    return center.add(horizontalRange, verticalRange, horizontalRange) to center.sub(horizontalRange, verticalRange, horizontalRange)
+}

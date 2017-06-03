@@ -59,7 +59,7 @@ class ClaimBlocks @Inject constructor(
     internal companion object {
         const val ID = "claim-blocks"
         const val NAME = "ClaimBlocks"
-        const val VERSION = "0.3"
+        const val VERSION = "0.3.5"
         const val AUTHOR = "RandomByte"
 
         const val GRIEF_PREVENTION_ID = "griefprevention"
@@ -117,6 +117,7 @@ class ClaimBlocks @Inject constructor(
 
     private fun loadConfig() {
         config = generalConfigManager.get()
+        config.validate()
         generalConfigManager.save(config) // regenerate config
     }
 
@@ -130,10 +131,13 @@ class ClaimBlocks @Inject constructor(
             val final = transaction.final
             val location = final.location.get()
 
-            if (isRegisteredClaimBlock(final.state.type)) {
-                val horizontalRange = getHorizontalRange(final.state.type)!!
-                val verticalRange = getVerticalRange(final.state.type)!!
-                if (horizontalRange > 0 && !createClaim(location, horizontalRange, verticalRange, listOf(player))) event.isCancelled = true
+            val rangeConfig = config.getRangeConfig(final.state.type)
+            if (rangeConfig != null) {
+                val horizontalRange = rangeConfig.horizontalRange
+                val verticalRange = rangeConfig.verticalRange
+                if (!createClaim(location, horizontalRange, verticalRange, rangeConfig.shifting, listOf(player))) {
+                    event.isCancelled = true
+                }
             } else if (config.beacons.enabled && final.state.type == BEACON) {
                 executeAfterBeaconBlockUpdate {
                     if (location.tileEntity.isPresent) {
@@ -153,7 +157,7 @@ class ClaimBlocks @Inject constructor(
         val horizontalRange = beacon.getHorizontalRange()
         if (horizontalRange > 0) {
             val verticalRange = if (config.beacons.verticalRange == 0) horizontalRange else config.beacons.verticalRange
-            if (!createClaim(beacon.location, horizontalRange, verticalRange, players)) {
+            if (!createClaim(beacon.location, horizontalRange, verticalRange, players = players)) {
                 // didn't work -> remove beacon and drop item
                 destroyAndDropBlock(beacon.location)
             }
@@ -164,13 +168,15 @@ class ClaimBlocks @Inject constructor(
         }
     }
 
-    private fun createClaim(location: Location<World>, horizontalRange: Int, verticalRange: Int, players: List<Player>): Boolean {
-        val (cornerA, cornerB) = getClaimCorners(location.blockPosition, horizontalRange, verticalRange)
+    private fun createClaim(location: Location<World>, horizontalRange: Int, verticalRange: Int, shifting: Vector3i = Vector3i.ZERO, players: List<Player>): Boolean {
+        val shiftedCenter = location.blockPosition.add(shifting)
+        val (cornerA, cornerB) = getClaimCorners(shiftedCenter, horizontalRange, verticalRange)
 
         if (checkOverlaps(location.extent, cornerA, cornerB, players)) return false
 
         val success = claimManager.createClaim(location.extent, cornerA, cornerB, players.first().uniqueId)
         if (success) {
+            // use the real location of the claimblock here to later check if a claim is registered when breaking the block
             val newDatabaseConfig = claimBlocksConfigManager.get().addPosition(location, horizontalRange)
             claimBlocksConfigManager.save(newDatabaseConfig)
             players.forEach { it.sendMessage("Created claim!".green()) }
@@ -211,12 +217,13 @@ class ClaimBlocks @Inject constructor(
 
                     val isRegistered = claimBlocksConfigManager.get().getRange(location) != null
 
-                    if (isRegistered && (isRegisteredClaimBlock(original.state.type) || original.state.type == BEACON)) {
+                    val isRegisteredClaimBlockType = config.getRangeConfig(original.state.type) != null
+                    if (isRegistered && (isRegisteredClaimBlockType || original.state.type == BEACON)) {
                         removeClaim(location, players)
                         return
                     } else if (original.state.type.isBeaconBaseBlock()) {
                         executeAfterBeaconBlockUpdate {
-                            getBeaconsInRange(location, 10).forEach { beacon -> checkBeacon(beacon, players) }
+                            getBeaconsInRange(location, 20).forEach { beacon -> checkBeacon(beacon, players) }
                         }
                     }
                 }
@@ -294,21 +301,6 @@ class ClaimBlocks @Inject constructor(
         }
 
         return false
-    }
-
-    private fun getHorizontalRange(blockType: BlockType): Int? = config.ranges.firstOrNull { it.block == blockType }?.horizontalRange
-    private fun getVerticalRange(blockType: BlockType): Int? = config.ranges.firstOrNull { it.block == blockType }?.verticalRange
-    private fun isRegisteredClaimBlock(blockType: BlockType) = getHorizontalRange(blockType) != null
-
-    /**
-     * If [verticalRange] is less than 0 the corners are set to cover all the area from bedrock to the max build height.
-     */
-    private fun getClaimCorners(center: Vector3i, horizontalRange: Int, verticalRange: Int): Pair<Vector3i, Vector3i> {
-        if (verticalRange < 0) {
-            val (cornerA, cornerB) = getClaimCorners(center, horizontalRange, 0)
-            return Vector3i(cornerA.x, 0, cornerA.z) to Vector3i(cornerB.x, 256, cornerB.z)
-        }
-        return center.add(horizontalRange, verticalRange, horizontalRange) to center.sub(horizontalRange, verticalRange, horizontalRange)
     }
 
     private fun getBeaconsInRange(location: Location<*>, range: Int): List<Beacon> {
