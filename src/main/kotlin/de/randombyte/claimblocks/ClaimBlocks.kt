@@ -126,10 +126,15 @@ class ClaimBlocks @Inject constructor(
      */
     @Listener
     fun onPlaceBlock(event: ChangeBlockEvent.Place, @Root player: Player) {
-        if (!player.hasPermission("$ROOT_PERMISSION.use")) return
         event.transactions.forEach { transaction ->
             val final = transaction.final
             val location = final.location.get()
+
+            if (!player.hasPermission("$ROOT_PERMISSION.use.${final.state.type.id}")) {
+                event.isCancelled = true
+                player.sendMessage("You don't have the permission to use this claim-block!".red())
+                return
+            }
 
             val rangeConfig = config.getRangeConfig(final.state.type)
             if (rangeConfig != null) {
