@@ -32,7 +32,7 @@ internal class GeneralConfig(
             @Setting val block: BlockType = AIR,
             @Setting val horizontalRange: Int = -1,
             @Setting(comment = "-1 for max. height") val verticalRange: Int = -1,
-            @Setting(comment = "Shifts the created instead of centering it around the claimblock") val shifting: Vector3i = Vector3i.ZERO
+            @Setting(comment = "Shifts the created claim instead of centering it around the claimblock") val shifting: Vector3i = Vector3i.ZERO
     )
 
     @ConfigSerializable

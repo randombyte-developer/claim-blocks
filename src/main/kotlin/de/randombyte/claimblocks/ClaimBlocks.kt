@@ -59,7 +59,7 @@ class ClaimBlocks @Inject constructor(
     internal companion object {
         const val ID = "claim-blocks"
         const val NAME = "ClaimBlocks"
-        const val VERSION = "0.4"
+        const val VERSION = "1.0"
         const val AUTHOR = "RandomByte"
 
         const val GRIEF_PREVENTION_ID = "griefprevention"
@@ -128,34 +128,50 @@ class ClaimBlocks @Inject constructor(
     fun onPlaceBlock(event: ChangeBlockEvent.Place, @Root player: Player) {
         event.transactions.forEach { transaction ->
             val final = transaction.final
+            val blockType = final.state.type
             val location = final.location.get()
 
-            if (!player.hasPermission("$ROOT_PERMISSION.use.${final.state.type.id}")) {
+            val rangeConfig = config.getRangeConfig(final.state.type)
+
+            val configPresent = rangeConfig != null
+            val handleBeacon = config.beacons.enabled && final.state.type == BEACON
+            val isBeaconBaseBlock = final.state.type.isBeaconBaseBlock()
+
+            if ((configPresent || handleBeacon || isBeaconBaseBlock) && !checkPermission(player, blockType)) {
                 event.isCancelled = true
-                player.sendMessage("You don't have the permission to use this claim-block!".red())
                 return
             }
 
-            val rangeConfig = config.getRangeConfig(final.state.type)
             if (rangeConfig != null) {
                 val horizontalRange = rangeConfig.horizontalRange
                 val verticalRange = rangeConfig.verticalRange
                 if (!createClaim(location, horizontalRange, verticalRange, rangeConfig.shifting, listOf(player))) {
                     event.isCancelled = true
                 }
-            } else if (config.beacons.enabled && final.state.type == BEACON) {
+            } else if (handleBeacon) {
                 executeAfterBeaconBlockUpdate {
                     if (location.tileEntity.isPresent) {
                         val beacon = location.tileEntity.get() as Beacon
                         registerBeaconBlock(beacon, listOf(player))
                     }
                 }
-            } else if (final.state.type.isBeaconBaseBlock()) {
+            } else if (isBeaconBaseBlock) {
                 executeAfterBeaconBlockUpdate {
                     getBeaconsInRange(location, 10).forEach { beacon -> checkBeacon(beacon, listOf(player)) }
                 }
             }
         }
+    }
+
+    /**
+     * @return true if permissions are okay, false if not
+     */
+    private fun checkPermission(player: Player, blockType: BlockType): Boolean {
+        if (!player.hasPermission("$ROOT_PERMISSION.use.${blockType.id}")) {
+            player.sendMessage("You don't have the permission to use this claim-block!".red())
+            return false
+        }
+        return true
     }
 
     private fun registerBeaconBlock(beacon: Beacon, players: List<Player>) {
