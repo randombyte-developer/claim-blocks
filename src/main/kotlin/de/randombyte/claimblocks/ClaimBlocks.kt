@@ -154,10 +154,7 @@ class ClaimBlocks @Inject constructor(
             val handleBeacon = config.beacons.enabled && final.state.type == BEACON
             val isBeaconBaseBlock = final.state.type.isBeaconBaseBlock()
 
-            if ((configPresent || handleBeacon || isBeaconBaseBlock) && !checkPermission(player, blockType)) {
-                event.isCancelled = true
-                return
-            }
+            if ((configPresent || handleBeacon || isBeaconBaseBlock) && !checkPermission(player, blockType)) return
 
             if (rangeConfig != null) {
                 val horizontalRange = rangeConfig.horizontalRange
@@ -183,13 +180,8 @@ class ClaimBlocks @Inject constructor(
     /**
      * @return true if permissions are okay, false if not
      */
-    private fun checkPermission(player: Player, blockType: BlockType): Boolean {
-        if (!player.hasPermission("$ROOT_PERMISSION.use.${blockType.id}")) {
-            player.sendMessage(messages.permissionDenied)
-            return false
-        }
-        return true
-    }
+    private fun checkPermission(player: Player, blockType: BlockType) =
+            player.hasPermission("$ROOT_PERMISSION.use.${blockType.id}")
 
     private fun registerBeaconBlock(beacon: Beacon, players: List<Player>) {
         val horizontalRange = beacon.getHorizontalRange()
@@ -326,8 +318,8 @@ class ClaimBlocks @Inject constructor(
         if (Sponge.getPluginManager().getPlugin(GRIEF_PREVENTION_ID).isPresent) {
             claimManager = GriefPreventionClaimManager(pluginContainer, getServiceOrFail(GriefPreventionApi::class))
             Sponge.getEventManager().registerListeners(this, GriefPreventionCrossBorderClaimListener(
-                    getEnterTextTemplate = messages::enterClaim,
-                    getExitTextTemplate = messages::exitClaim
+                    getEnterTextTemplate = { messages.enterClaim },
+                    getExitTextTemplate = { messages.exitClaim }
             ))
             return true
         }

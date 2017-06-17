@@ -9,8 +9,6 @@ import org.spongepowered.api.text.TextTemplate
 
 @ConfigSerializable
 class MessagesConfig(
-        @Setting val permissionDenied: Text = "You don't have the permission to use this claim-block!".red(),
-
         @Setting val createdClaim: Text = "Created claim!".green(),
         @Setting val claimCreationFailed: Text = "Failed to create claim!".red(),
         @Setting val removedClaim: Text = "Removed claim!".yellow(),
