@@ -6,6 +6,7 @@ import de.randombyte.claimblocks.ClaimBlocks.Companion.FOX_GUARD_ID
 import de.randombyte.claimblocks.ClaimBlocks.Companion.GRIEF_PREVENTION_ID
 import de.randombyte.claimblocks.config.DatabaseConfig
 import de.randombyte.claimblocks.config.GeneralConfig
+import de.randombyte.claimblocks.config.MessagesConfig
 import de.randombyte.claimblocks.config.WorldTypeSerializer
 import de.randombyte.claimblocks.regions.ClaimManager
 import de.randombyte.claimblocks.regions.GriefPreventionClaimManager
@@ -13,7 +14,9 @@ import de.randombyte.claimblocks.regions.RedProtectClaimManager
 import de.randombyte.claimblocks.regions.crossborderevent.GriefPreventionCrossBorderClaimListener
 import de.randombyte.kosp.bstats.BStats
 import de.randombyte.kosp.config.ConfigManager
-import de.randombyte.kosp.extensions.*
+import de.randombyte.kosp.extensions.orNull
+import de.randombyte.kosp.extensions.rangeTo
+import de.randombyte.kosp.extensions.typeToken
 import de.randombyte.kosp.getServiceOrFail
 import me.ryanhamshire.griefprevention.api.GriefPreventionApi
 import ninja.leaping.configurate.hocon.HoconConfigurationLoader
@@ -59,7 +62,7 @@ class ClaimBlocks @Inject constructor(
     internal companion object {
         const val ID = "claim-blocks"
         const val NAME = "ClaimBlocks"
-        const val VERSION = "1.0"
+        const val VERSION = "1.1"
         const val AUTHOR = "RandomByte"
 
         const val GRIEF_PREVENTION_ID = "griefprevention"
@@ -83,6 +86,7 @@ class ClaimBlocks @Inject constructor(
             simpleTextSerialization = true,
             simpleTextTemplateSerialization = true)
 
+    // Worlds must be loaded when this config is loaded due to WorldTypeSerializer
     private val claimBlocksConfigManager = ConfigManager(
             configLoader = HoconConfigurationLoader.builder().setPath(configPath.resolve("database.conf")).build(),
             clazz = DatabaseConfig::class.java,
@@ -91,8 +95,18 @@ class ClaimBlocks @Inject constructor(
                 registerType(World::class.typeToken, WorldTypeSerializer)
             })
 
+    private val messageConfigManager = ConfigManager(
+            configLoader = HoconConfigurationLoader.builder().setPath(configPath.resolve("messages.conf")).build(),
+            clazz = MessagesConfig::class.java,
+            hyphenSeparatedKeys = true,
+            simpleTextSerialization = true,
+            simpleTextTemplateSerialization = true
+    )
+
     // The config is needed frequently -> cache it
     private lateinit var config: GeneralConfig
+
+    private lateinit var messages: MessagesConfig
 
     private lateinit var claimManager: ClaimManager
 
@@ -119,6 +133,9 @@ class ClaimBlocks @Inject constructor(
         config = generalConfigManager.get()
         config.validate()
         generalConfigManager.save(config) // regenerate config
+
+        messages = messageConfigManager.get()
+        messageConfigManager.save(messages) // regenerate config
     }
 
     /**
@@ -168,7 +185,7 @@ class ClaimBlocks @Inject constructor(
      */
     private fun checkPermission(player: Player, blockType: BlockType): Boolean {
         if (!player.hasPermission("$ROOT_PERMISSION.use.${blockType.id}")) {
-            player.sendMessage("You don't have the permission to use this claim-block!".red())
+            player.sendMessage(messages.permissionDenied)
             return false
         }
         return true
@@ -185,7 +202,7 @@ class ClaimBlocks @Inject constructor(
         } else {
             // no beacon pyramid underneath
             destroyAndDropBlock(beacon.location)
-            players.forEach { it.sendMessage("The base of the beacon block has to be completed at first!".yellow()) }
+            players.forEach { it.sendMessage(messages.beaconLevelZero) }
         }
     }
 
@@ -200,10 +217,10 @@ class ClaimBlocks @Inject constructor(
             // use the real location of the claimblock here to later check if a claim is registered when breaking the block
             val newDatabaseConfig = claimBlocksConfigManager.get().addPosition(location, horizontalRange)
             claimBlocksConfigManager.save(newDatabaseConfig)
-            players.forEach { it.sendMessage("Created claim!".green()) }
+            players.forEach { it.sendMessage(messages.createdClaim) }
             return true
         } else {
-            players.forEach { it.sendMessage("Failed to create claim!".red()) }
+            players.forEach { it.sendMessage(messages.claimCreationFailed) }
             return false
         }
     }
@@ -214,10 +231,11 @@ class ClaimBlocks @Inject constructor(
      * @return true if overlaps with other region(s), false if not
      */
     private fun checkOverlaps(world: World, cornerA: Vector3i, cornerB: Vector3i, players: List<Player>): Boolean {
-        val allRegionOwnersInRange = claimManager.getClaimOwners(world, cornerA, cornerB).toSet()
-        if (allRegionOwnersInRange.isNotEmpty()) {
-            players.forEach { it.sendMessage(("You can't create a claim here, it overlaps with claims by other players: " +
-                    allRegionOwnersInRange.joinToString(transform = User::getName)).red()) }
+        val allClaimOwnersInRange = claimManager.getClaimOwners(world, cornerA, cornerB).toSet()
+        if (allClaimOwnersInRange.isNotEmpty()) {
+            val claimOwnersNames = allClaimOwnersInRange.joinToString(transform = User::getName)
+            val message = messages.claimsOverlap.apply(mapOf("overlapsClaimOwnersNames" to claimOwnersNames)).build()
+            players.forEach { it.sendMessage(message) }
             return true
         }
 
@@ -258,7 +276,7 @@ class ClaimBlocks @Inject constructor(
         val successful = claimManager.removeClaim(location)
         val newDatabaseConfig = claimBlocksConfigManager.get().removePosition(location)
         claimBlocksConfigManager.save(newDatabaseConfig)
-        if (successful) players.forEach { it.sendMessage("Removed claim!".yellow()) }
+        if (successful) players.forEach { it.sendMessage(messages.removedClaim) }
     }
 
     /**
@@ -273,7 +291,7 @@ class ClaimBlocks @Inject constructor(
         if (storedRange == null) {
             // invalid beacon
             destroyAndDropBlock(location)
-            players.forEach { it.sendMessage(("Beacon was destroyed because it was invalid!").yellow()) }
+            players.forEach { it.sendMessage(messages.invalidBeacon) }
             return false
         } else {
             val realRange = beacon.getHorizontalRange()
@@ -281,9 +299,7 @@ class ClaimBlocks @Inject constructor(
                 // range changed
                 destroyAndDropBlock(location)
                 removeClaim(location, players)
-                players.forEach {
-                    it.sendMessage(("Beacon was destroyed because its completeness level changed! " +
-                            "Re-place the beacon to re-register it.").yellow()) }
+                players.forEach { it.sendMessage(messages.beaconLevelChanged) }
                 return false
             }
         }
@@ -310,8 +326,8 @@ class ClaimBlocks @Inject constructor(
         if (Sponge.getPluginManager().getPlugin(GRIEF_PREVENTION_ID).isPresent) {
             claimManager = GriefPreventionClaimManager(pluginContainer, getServiceOrFail(GriefPreventionApi::class))
             Sponge.getEventManager().registerListeners(this, GriefPreventionCrossBorderClaimListener(
-                    getEnterTextTemplate = config.messages::enterClaim,
-                    getExitTextTemplate = config.messages::exitClaim
+                    getEnterTextTemplate = messages::enterClaim,
+                    getExitTextTemplate = messages::exitClaim
             ))
             return true
         }

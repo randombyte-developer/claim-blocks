@@ -1,13 +1,13 @@
 plugins {
-    id "org.jetbrains.kotlin.jvm" version "1.1.1"
-    id "org.jetbrains.kotlin.kapt" version "1.1.1"
+    id "org.jetbrains.kotlin.jvm" version "1.1.2-5"
+    id "org.jetbrains.kotlin.kapt" version "1.1.2-5"
     id "com.qixalite.spongestart" version "1.6.2"
     id "com.github.johnrengelman.shadow" version "1.2.4"
     id "flavor.pie.promptsign" version "1.0.2"
 }
 
 group "de.randombyte"
-version "1.0"
+version "1.1"
 
 repositories {
     jcenter()
@@ -26,9 +26,9 @@ configurations {
 }
 
 dependencies {
-    shadow "org.jetbrains.kotlin:kotlin-stdlib-jre8:1.1.1"
+    shadow "org.jetbrains.kotlin:kotlin-stdlib-jre8:1.1.2-5"
     kapt "org.spongepowered:spongeapi:5.1.0"
-    shadow("com.github.randombyte-developer.kosp:kosp:v0.3.12.7") { transitive = false }
+    shadow("com.github.randombyte-developer.kosp:kosp:v0.4.3.2") { transitive = false }
     compile files("mods/gp.jar") // griefprevention
     compile files("mods/rp.jar") // griefprevention
     compile files("mods/fg.jar") // foxguard
@@ -49,3 +49,9 @@ shadowJar {
 }
 build.dependsOn shadowJar
 signArchives.dependsOn shadowJar
+
+compileKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}

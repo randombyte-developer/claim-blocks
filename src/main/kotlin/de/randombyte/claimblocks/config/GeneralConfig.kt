@@ -1,32 +1,18 @@
 package de.randombyte.claimblocks.config
 
 import com.flowpowered.math.vector.Vector3i
-import de.randombyte.claimblocks.config.GeneralConfig.Messages
 import de.randombyte.claimblocks.getClaimCorners
-import de.randombyte.claimblocks.rangeTo
-import de.randombyte.kosp.extensions.aqua
-import de.randombyte.kosp.extensions.toArg
-import de.randombyte.kosp.fixedTextTemplateOf
+import de.randombyte.kosp.extensions.rangeTo
 import ninja.leaping.configurate.objectmapping.Setting
 import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable
 import org.spongepowered.api.block.BlockType
 import org.spongepowered.api.block.BlockTypes.*
-import org.spongepowered.api.text.TextTemplate
 
 @ConfigSerializable
 internal class GeneralConfig(
-        @Setting val messages: Messages = Messages(),
         @Setting val ranges: List<Range> = emptyList(),
         @Setting val beacons: Beacons = GeneralConfig.Beacons()
 ) {
-    @ConfigSerializable
-    class Messages(
-            @Setting val enterClaim: TextTemplate = fixedTextTemplateOf("You entered the claim of '",
-                    "claimOwner".toArg().aqua(),"'!"),
-            @Setting val exitClaim: TextTemplate = fixedTextTemplateOf("You left the claim of '",
-                    "claimOwner".toArg().aqua(),"'!")
-    )
-
     @ConfigSerializable
     class Range(
             @Setting val block: BlockType = AIR,

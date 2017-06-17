@@ -1,9 +1,7 @@
 package de.randombyte.claimblocks.regions.crossborderevent
 
 import me.ryanhamshire.griefprevention.api.event.BorderClaimEvent
-import org.spongepowered.api.entity.living.player.Player
 import org.spongepowered.api.event.Listener
-import org.spongepowered.api.event.filter.Getter
 import org.spongepowered.api.text.TextTemplate
 
 internal class GriefPreventionCrossBorderClaimListener(
@@ -12,7 +10,7 @@ internal class GriefPreventionCrossBorderClaimListener(
 ) {
 
     @Listener
-    fun onCrossBorderClaimEvent(event: BorderClaimEvent, @Getter("getTargetEntity") player: Player) {
+    fun onCrossBorderClaimEvent(event: BorderClaimEvent) {
         val exitClaim = event.exitClaim
         val enterClaim = event.enterClaim
 

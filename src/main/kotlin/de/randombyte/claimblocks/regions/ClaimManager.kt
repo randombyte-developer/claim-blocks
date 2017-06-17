@@ -1,7 +1,7 @@
 package de.randombyte.claimblocks.regions
 
 import com.flowpowered.math.vector.Vector3i
-import de.randombyte.claimblocks.rangeTo
+import de.randombyte.kosp.extensions.rangeTo
 import org.spongepowered.api.entity.living.player.User
 import org.spongepowered.api.world.Location
 import org.spongepowered.api.world.World
