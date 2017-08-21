@@ -5,18 +5,20 @@ import br.net.fabiozumbi12.redprotect.RPUtil
 import br.net.fabiozumbi12.redprotect.Region
 import com.flowpowered.math.vector.Vector3i
 import de.randombyte.kosp.extensions.getUser
-import de.randombyte.kosp.extensions.orNull
-import de.randombyte.kosp.getServiceOrFail
+import de.randombyte.kosp.extensions.toUUID
 import org.spongepowered.api.entity.living.player.User
-import org.spongepowered.api.service.user.UserStorageService
 import org.spongepowered.api.world.Location
 import org.spongepowered.api.world.World
 import java.util.*
 
 class RedProtectClaimManager : ClaimManager {
     override fun getClaimOwners(location: Location<World>): List<User> {
-        return RedProtectAPI.getRegion(location)?.owners?.mapNotNull { userName ->
-            getServiceOrFail(UserStorageService::class).get(userName).orNull()
+        return RedProtectAPI.getRegion(location)?.leaders?.mapNotNull { userUuid ->
+            try {
+                userUuid.toUUID().getUser()
+            } catch (exception: IllegalArgumentException) {
+                throw RuntimeException("Running RedProtect on an offline server: Tried parsing UUID '$userUuid'", exception)
+            }
         } ?: emptyList()
     }
 
@@ -27,18 +29,19 @@ class RedProtectClaimManager : ClaimManager {
         val locationB = world.getLocation(positionA)
         val region = Region(
                 claimName,
-                LinkedList<String>().apply { add(ownerName) },
-                LinkedList<String>(),
-                ownerName,
+                LinkedList<String>(), // admins
+                LinkedList<String>(), // members
+                LinkedList<String>().apply { add(ownerName) }, // leaders
                 locationA,
                 locationB,
-                hashMapOf<String, Any>(),
-                "",
-                0,
+                hashMapOf<String, Any>(), // flags
+                "", // welcome message
+                0, // priority
                 world.name,
-                RPUtil.DateNow(),
-                0,
-                null
+                RPUtil.DateNow(), // latest visit of memeber or leader
+                0, // "latest value of the region" say the docs
+                locationA, // teleport location
+                true // "can delete" say the docs, don't know what it does exactly
         )
 
         RedProtectAPI.addRegion(region, world)

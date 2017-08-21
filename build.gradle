@@ -7,7 +7,7 @@ plugins {
 }
 
 group "de.randombyte"
-version "1.1"
+version "1.2"
 
 repositories {
     jcenter()
@@ -29,10 +29,11 @@ dependencies {
     shadow "org.jetbrains.kotlin:kotlin-stdlib-jre8:1.1.2-5"
     kapt "org.spongepowered:spongeapi:5.1.0"
     shadow("com.github.randombyte-developer.kosp:kosp:v0.5.2") { transitive = false }
-    compile files("mods/griefprevention-1.11.2-4.1.0.356-api.jar")
-    compile files("mods/rp.jar") // redprotect
-    compile files("mods/fg.jar") // foxguard
-    compile(files("mods/fc.jar")) // foxcore
+
+    compile files("libs/griefprevention-1.11.2-4.1.0.356-api.jar")
+    compile files("libs/RedProtect-Sponge-6.1.0-7.2.0-b137.jar")
+    compile files("libs/fg.jar") // foxguard
+    compile(files("libs/fc.jar")) // foxcore
 }
 
 jar.enabled = false
