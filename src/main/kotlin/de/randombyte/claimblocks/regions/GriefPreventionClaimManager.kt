@@ -28,14 +28,13 @@ internal class GriefPreventionClaimManager(
     }
 
     override fun createClaim(world: World, positionA: Vector3i, positionB: Vector3i, owner: UUID): Boolean {
-        val claim = Claim.builder()
-                .cuboid(true)
+        Claim.builder()
                 .world(world)
                 .bounds(positionA, positionB)
                 .owner(owner)
                 .cause(cause)
+                .requireClaimBlocks(false)
                 .build().claim.orNull() ?: return false
-        griefPreventionApi.getClaimManager(world).addClaim(claim, cause)
         return true
     }
 
