@@ -1,20 +1,24 @@
 package de.randombyte.claimblocks.regions
 
 import com.flowpowered.math.vector.Vector3i
+import de.randombyte.kosp.extensions.getPlayer
 import de.randombyte.kosp.extensions.getUser
-import de.randombyte.kosp.extensions.orNull
 import me.ryanhamshire.griefprevention.api.GriefPreventionApi
 import me.ryanhamshire.griefprevention.api.claim.Claim
+import me.ryanhamshire.griefprevention.api.claim.ClaimResultType
 import org.spongepowered.api.entity.living.player.User
 import org.spongepowered.api.event.cause.Cause
 import org.spongepowered.api.plugin.PluginContainer
+import org.spongepowered.api.text.Text
 import org.spongepowered.api.world.Location
 import org.spongepowered.api.world.World
 import java.util.*
 
 internal class GriefPreventionClaimManager(
         pluginContainer: PluginContainer,
-        private val griefPreventionApi: GriefPreventionApi
+        private val griefPreventionApi: GriefPreventionApi,
+        private val doesConsumeClaimBlocks: () -> Boolean,
+        private val getInsufficientGriefPreventionClaimBlocksText: () -> Text
 ) : ClaimManager {
 
     private val cause = Cause.source(pluginContainer).build()
@@ -28,14 +32,17 @@ internal class GriefPreventionClaimManager(
     }
 
     override fun createClaim(world: World, positionA: Vector3i, positionB: Vector3i, owner: UUID): Boolean {
-        Claim.builder()
+        val claimResult = Claim.builder()
                 .world(world)
                 .bounds(positionA, positionB)
                 .owner(owner)
                 .cause(cause)
-                .requireClaimBlocks(false)
-                .build().claim.orNull() ?: return false
-        return true
+                .requireClaimBlocks(doesConsumeClaimBlocks())
+                .build()
+        if (claimResult.resultType == ClaimResultType.INSUFFICIENT_CLAIM_BLOCKS) {
+            owner.getPlayer()?.sendMessage(getInsufficientGriefPreventionClaimBlocksText())
+        }
+        return claimResult.claim.isPresent
     }
 
     override fun removeClaim(location: Location<World>): Boolean {

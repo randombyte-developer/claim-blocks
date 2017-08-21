@@ -10,6 +10,8 @@ import org.spongepowered.api.block.BlockTypes.*
 
 @ConfigSerializable
 internal class GeneralConfig(
+        @Setting(comment = "If you are using GriefPrevention this determines if the created claims should consume the GP-claimblocks of the player")
+        val consumeClaimBlocks: Boolean = false,
         @Setting val ranges: List<Range> = emptyList(),
         @Setting val beacons: Beacons = GeneralConfig.Beacons()
 ) {
@@ -36,7 +38,7 @@ internal class GeneralConfig(
     fun getRangeConfig(blockType: BlockType): Range? = ranges.firstOrNull { it.block == blockType }
 
     /**
-     * Checks if all ranges' the shifting are valid.
+     * Checks if all ranges' shifting are valid.
      */
     fun validate() {
         ranges.forEach { range ->

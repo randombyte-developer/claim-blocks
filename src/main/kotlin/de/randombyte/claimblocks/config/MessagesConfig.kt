@@ -11,6 +11,7 @@ import org.spongepowered.api.text.TextTemplate
 class MessagesConfig(
         @Setting val createdClaim: Text = "Created claim!".green(),
         @Setting val claimCreationFailed: Text = "Failed to create claim!".red(),
+        @Setting val insufficientGriefPreventionClaimBlocks: Text = "You don't have enough GriefPrevention-ClaimBlocks!".red(),
         @Setting val removedClaim: Text = "Removed claim!".yellow(),
         @Setting val claimsOverlap: TextTemplate = fixedTextTemplateOf(
                 "You can't create a claim here, it overlaps with claims by other players: ".red(),
