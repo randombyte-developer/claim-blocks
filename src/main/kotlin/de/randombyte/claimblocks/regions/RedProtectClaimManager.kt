@@ -6,18 +6,17 @@ import br.net.fabiozumbi12.redprotect.Region
 import com.flowpowered.math.vector.Vector3i
 import de.randombyte.kosp.extensions.getUser
 import de.randombyte.kosp.extensions.toUUID
-import org.spongepowered.api.entity.living.player.User
 import org.spongepowered.api.world.Location
 import org.spongepowered.api.world.World
 import java.util.*
 
 class RedProtectClaimManager : ClaimManager {
-    override fun getClaimOwners(location: Location<World>): List<User> {
+    override fun getClaimOwners(location: Location<World>): List<String> {
         return RedProtectAPI.getRegion(location)?.leaders?.mapNotNull { userUuid ->
             try {
-                userUuid.toUUID().getUser()
+                if (userUuid == "#server#") "Server" else userUuid.toUUID().getUser()?.name
             } catch (exception: IllegalArgumentException) {
-                throw RuntimeException("Running RedProtect on an offline server: Tried parsing UUID '$userUuid'", exception)
+                return@mapNotNull userUuid
             }
         } ?: emptyList()
     }
@@ -38,7 +37,7 @@ class RedProtectClaimManager : ClaimManager {
                 "", // welcome message
                 0, // priority
                 world.name,
-                RPUtil.DateNow(), // latest visit of memeber or leader
+                RPUtil.DateNow(), // latest visit of member or leader
                 0, // "latest value of the region" say the docs
                 locationA, // teleport location
                 true // "can delete" say the docs, don't know what it does exactly

@@ -29,7 +29,6 @@ import org.spongepowered.api.config.ConfigDir
 import org.spongepowered.api.data.key.Keys
 import org.spongepowered.api.entity.EntityTypes
 import org.spongepowered.api.entity.living.player.Player
-import org.spongepowered.api.entity.living.player.User
 import org.spongepowered.api.event.Listener
 import org.spongepowered.api.event.block.ChangeBlockEvent
 import org.spongepowered.api.event.cause.Cause
@@ -62,7 +61,7 @@ class ClaimBlocks @Inject constructor(
     internal companion object {
         const val ID = "claim-blocks"
         const val NAME = "ClaimBlocks"
-        const val VERSION = "1.2.1"
+        const val VERSION = "1.2.3"
         const val AUTHOR = "RandomByte"
 
         const val GRIEF_PREVENTION_ID = "griefprevention"
@@ -225,7 +224,7 @@ class ClaimBlocks @Inject constructor(
     private fun checkOverlaps(world: World, cornerA: Vector3i, cornerB: Vector3i, players: List<Player>): Boolean {
         val allClaimOwnersInRange = claimManager.getClaimOwners(world, cornerA, cornerB).toSet()
         if (allClaimOwnersInRange.isNotEmpty()) {
-            val claimOwnersNames = allClaimOwnersInRange.joinToString(transform = User::getName)
+            val claimOwnersNames = allClaimOwnersInRange.joinToString()
             val message = messages.claimsOverlap.apply(mapOf("overlapsClaimOwnersNames" to claimOwnersNames)).build()
             players.forEach { it.sendMessage(message) }
             return true

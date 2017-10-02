@@ -2,7 +2,6 @@ package de.randombyte.claimblocks.regions
 
 import com.flowpowered.math.vector.Vector3i
 import de.randombyte.kosp.extensions.rangeTo
-import org.spongepowered.api.entity.living.player.User
 import org.spongepowered.api.world.Location
 import org.spongepowered.api.world.World
 import java.util.*
@@ -13,9 +12,9 @@ import java.util.*
  */
 interface ClaimManager {
 
-    fun getClaimOwners(location: Location<World>): List<User>
+    fun getClaimOwners(location: Location<World>): List<String>
 
-    fun getClaimOwners(world: World, positionA: Vector3i, positionB: Vector3i): List<User> {
+    fun getClaimOwners(world: World, positionA: Vector3i, positionB: Vector3i): List<String> {
         val positionMin = positionA.min(positionB)
         val positionMax = positionA.max(positionB)
 
@@ -23,8 +22,6 @@ interface ClaimManager {
             val regionOwners = getClaimOwners(Location(world, position))
             return@mapNotNull if (regionOwners.isEmpty()) null else regionOwners
         }.flatten()
-
-
 
         return allRegionOwners
     }

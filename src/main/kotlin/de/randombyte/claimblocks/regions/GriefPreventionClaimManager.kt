@@ -6,7 +6,6 @@ import de.randombyte.kosp.extensions.getUser
 import me.ryanhamshire.griefprevention.api.GriefPreventionApi
 import me.ryanhamshire.griefprevention.api.claim.Claim
 import me.ryanhamshire.griefprevention.api.claim.ClaimResultType
-import org.spongepowered.api.entity.living.player.User
 import org.spongepowered.api.event.cause.Cause
 import org.spongepowered.api.plugin.PluginContainer
 import org.spongepowered.api.text.Text
@@ -25,10 +24,10 @@ internal class GriefPreventionClaimManager(
 
     private fun getClaimManager(world: World) = griefPreventionApi.getClaimManager(world)
 
-    override fun getClaimOwners(location: Location<World>): List<User> {
+    override fun getClaimOwners(location: Location<World>): List<String> {
         val claim = getClaimManager(location.extent).getClaimAt(location, false) // ignoreHeight: false
         return if (claim.isWilderness || claim.ownerUniqueId == UUID(0, 0)) emptyList()
-        else listOf(claim.ownerUniqueId.getUser()!!)
+        else listOf(claim.ownerUniqueId.getUser()!!.name)
     }
 
     override fun createClaim(world: World, positionA: Vector3i, positionB: Vector3i, owner: UUID): Boolean {
