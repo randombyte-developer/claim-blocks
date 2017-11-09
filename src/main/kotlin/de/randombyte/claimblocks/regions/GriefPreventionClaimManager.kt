@@ -6,6 +6,7 @@ import de.randombyte.kosp.extensions.getUser
 import me.ryanhamshire.griefprevention.api.GriefPreventionApi
 import me.ryanhamshire.griefprevention.api.claim.Claim
 import me.ryanhamshire.griefprevention.api.claim.ClaimResultType
+import org.slf4j.Logger
 import org.spongepowered.api.event.cause.Cause
 import org.spongepowered.api.plugin.PluginContainer
 import org.spongepowered.api.text.Text
@@ -17,7 +18,9 @@ internal class GriefPreventionClaimManager(
         pluginContainer: PluginContainer,
         private val griefPreventionApi: GriefPreventionApi,
         private val doesConsumeClaimBlocks: () -> Boolean,
-        private val getInsufficientGriefPreventionClaimBlocksText: () -> Text
+        private val getInsufficientGriefPreventionClaimBlocksText: () -> Text,
+        private val debug: Boolean = false,
+        private val logger: Logger
 ) : ClaimManager {
 
     private val cause = Cause.source(pluginContainer).build()
@@ -38,6 +41,10 @@ internal class GriefPreventionClaimManager(
                 .cause(cause)
                 .requireClaimBlocks(doesConsumeClaimBlocks())
                 .build()
+
+        if (debug) {
+            logger.info("Tried creating claim with GriefPrevention: Result = '${claimResult.resultType.name}'; Message = '${claimResult.message.orElse(Text.EMPTY).toPlain()}'")
+        }
         if (claimResult.resultType == ClaimResultType.INSUFFICIENT_CLAIM_BLOCKS) {
             owner.getPlayer()?.sendMessage(getInsufficientGriefPreventionClaimBlocksText())
         }

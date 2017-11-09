@@ -61,7 +61,7 @@ class ClaimBlocks @Inject constructor(
     internal companion object {
         const val ID = "claim-blocks"
         const val NAME = "ClaimBlocks"
-        const val VERSION = "1.2.3"
+        const val VERSION = "1.2.4"
         const val AUTHOR = "RandomByte"
 
         const val GRIEF_PREVENTION_ID = "griefprevention"
@@ -319,7 +319,9 @@ class ClaimBlocks @Inject constructor(
                     pluginContainer,
                     getServiceOrFail(GriefPreventionApi::class),
                     doesConsumeClaimBlocks = { config.consumeClaimBlocks },
-                    getInsufficientGriefPreventionClaimBlocksText = { messages.insufficientGriefPreventionClaimBlocks }
+                    getInsufficientGriefPreventionClaimBlocksText = { messages.insufficientGriefPreventionClaimBlocks },
+                    debug = config.debug,
+                    logger = logger
             )
             Sponge.getEventManager().registerListeners(this, GriefPreventionCrossBorderClaimListener(
                     getEnterTextTemplate = { messages.enterClaim },

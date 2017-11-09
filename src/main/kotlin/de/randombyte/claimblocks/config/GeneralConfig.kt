@@ -13,7 +13,8 @@ internal class GeneralConfig(
         @Setting(comment = "If you are using GriefPrevention this determines if the created claims should consume the GP-claimblocks of the player")
         val consumeClaimBlocks: Boolean = false,
         @Setting val ranges: List<Range> = emptyList(),
-        @Setting val beacons: Beacons = GeneralConfig.Beacons()
+        @Setting val beacons: Beacons = GeneralConfig.Beacons(),
+        @Setting val debug: Boolean = false
 ) {
     @ConfigSerializable
     class Range(
