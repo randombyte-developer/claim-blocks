@@ -28,7 +28,7 @@ internal class GriefPreventionClaimManager(
     private fun getClaimManager(world: World) = griefPreventionApi.getClaimManager(world)
 
     override fun getClaimOwners(location: Location<World>): List<String> {
-        val claim = getClaimManager(location.extent).getClaimAt(location, false) // ignoreHeight: false
+        val claim = getClaimManager(location.extent).getClaimAt(location)
         return if (claim.isWilderness || claim.ownerUniqueId == UUID(0, 0)) emptyList()
         else listOf(claim.ownerUniqueId.getUser()!!.name)
     }
@@ -37,6 +37,7 @@ internal class GriefPreventionClaimManager(
         val claimResult = Claim.builder()
                 .world(world)
                 .bounds(positionA, positionB)
+                .cuboid(true)
                 .owner(owner)
                 .cause(cause)
                 .requireClaimBlocks(doesConsumeClaimBlocks())
@@ -53,7 +54,7 @@ internal class GriefPreventionClaimManager(
 
     override fun removeClaim(location: Location<World>): Boolean {
         val claimManager = getClaimManager(location.extent)
-        val claim = claimManager.getClaimAt(location, false) // ignoreHeight: false
+        val claim = claimManager.getClaimAt(location)
         if (claim.isWilderness) return false
         claimManager.deleteClaim(claim, cause)
         return true

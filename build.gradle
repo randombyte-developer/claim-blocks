@@ -13,6 +13,7 @@ repositories {
     jcenter()
     maven { url "https://repo.spongepowered.org/maven/" }
     maven { url "https://jitpack.io" }
+    maven { url "http://files.minecraftforge.net/maven" }
 }
 
 spongestart {
@@ -30,7 +31,7 @@ dependencies {
     kapt "org.spongepowered:spongeapi:5.1.0"
     shadow("com.github.randombyte-developer.kosp:kosp:v0.5.2") { transitive = false }
 
-    compile files("libs/griefprevention-1.11.2-4.1.0.356-api.jar")
+    compile "me.ryanhamshire:griefprevention:1.10.2-4.0.1.490:api"
     compile files("libs/RedProtect-Sponge-6.1.0-7.2.0-b137.jar")
     compile files("libs/fg.jar") // foxguard
     compile(files("libs/fc.jar")) // foxcore
