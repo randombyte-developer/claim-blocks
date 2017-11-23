@@ -15,9 +15,11 @@ internal class GriefPreventionCrossBorderClaimListener(
         val enterClaim = event.enterClaim
 
         if (enterClaim.isWilderness) {
+            if (event.exitMessage.isPresent) return
             val text = getExitTextTemplate().apply(mapOf("claimOwner" to exitClaim.ownerName)).build()
             event.setExitMessage(text)
         } else {
+            if (event.enterMessage.isPresent) return
             val text = getEnterTextTemplate().apply(mapOf("claimOwner" to enterClaim.ownerName)).build()
             event.setEnterMessage(text)
         }
