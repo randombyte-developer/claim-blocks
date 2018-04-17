@@ -52,7 +52,7 @@ class RedProtectClaimManager : ClaimManager {
                 minMbrZ,
                 minY,
                 maxY,
-                hashMapOf<String, Any>(), // flags
+                RedProtect.get().cfgs.defFlagsValues, // get default flags from RedProtect
                 "", // welcome message
                 0, // priority
                 world.name,
