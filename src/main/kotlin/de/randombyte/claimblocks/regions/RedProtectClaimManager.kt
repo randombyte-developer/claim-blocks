@@ -13,6 +13,7 @@ import java.util.*
 
 class RedProtectClaimManager : ClaimManager {
     private fun getRedProtectAPI() : RedProtectAPI {
+        //new RedProtectAPI object is not static now
         return RedProtect.get().api
     }
 
@@ -39,6 +40,7 @@ class RedProtectClaimManager : ClaimManager {
         val maxY = locationB.blockY
         val minY = locationA.blockY
 
+        // RP replaced method for creating region object - that's breaks compatibility - but I fixed it ;)
         val region = Region(
                 claimName,
                 LinkedList<String>(), // admins
@@ -57,7 +59,7 @@ class RedProtectClaimManager : ClaimManager {
                 RPUtil.DateNow(), // latest visit of member or leader
                 0, // "latest value of the region" say the docs
                 locationA, // teleport location
-                true // "can delete" say the docs, don't know what it does exactly
+                true // "can delete" - maybe for allow deleting by players
         )
 
         getRedProtectAPI().addRegion(region, world)
