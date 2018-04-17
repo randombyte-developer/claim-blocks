@@ -15,15 +15,12 @@ import org.spongepowered.api.world.World
 import java.util.*
 
 internal class GriefPreventionClaimManager(
-        pluginContainer: PluginContainer,
         private val griefPreventionApi: GriefPreventionApi,
         private val doesConsumeClaimBlocks: () -> Boolean,
         private val getInsufficientGriefPreventionClaimBlocksText: () -> Text,
         private val debug: Boolean = false,
         private val logger: Logger
 ) : ClaimManager {
-
-    private val cause = Cause.source(pluginContainer).build()
 
     private fun getClaimManager(world: World) = griefPreventionApi.getClaimManager(world)
 
@@ -39,7 +36,6 @@ internal class GriefPreventionClaimManager(
                 .bounds(positionA, positionB)
                 .cuboid(true)
                 .owner(owner)
-                .cause(cause)
                 .requireClaimBlocks(doesConsumeClaimBlocks())
                 .build()
 
@@ -56,7 +52,7 @@ internal class GriefPreventionClaimManager(
         val claimManager = getClaimManager(location.extent)
         val claim = claimManager.getClaimAt(location)
         if (claim.isWilderness) return false
-        claimManager.deleteClaim(claim, cause)
+        claimManager.deleteClaim(claim)
         return true
     }
 }
