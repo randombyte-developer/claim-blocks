@@ -1,6 +1,6 @@
 package de.randombyte.claimblocks.regions.crossborderevent
 
-import br.net.fabiozumbi12.redprotect.events.EnterExitRegionEvent
+import br.net.fabiozumbi12.RedProtect.Sponge.events.EnterExitRegionEvent
 import org.spongepowered.api.text.TextTemplate
 
 internal class RedProtectEnterExitClaimEvent(

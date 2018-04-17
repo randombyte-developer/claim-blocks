@@ -61,7 +61,7 @@ class ClaimBlocks @Inject constructor(
     internal companion object {
         const val ID = "claim-blocks"
         const val NAME = "ClaimBlocks"
-        const val VERSION = "1.3"
+        const val VERSION = "1.3-7.0.0"
         const val AUTHOR = "RandomByte"
 
         const val GRIEF_PREVENTION_ID = "griefprevention"
@@ -301,11 +301,11 @@ class ClaimBlocks @Inject constructor(
     private fun destroyAndDropBlock(location: Location<World>) {
         val blockType = location.block.type.item.orElseThrow { IllegalArgumentException("${location.block.type} doesn't have an item type!") }
         // break
-        location.setBlock(AIR.defaultState, Cause.source(pluginContainer).build())
+        location.setBlock(AIR.defaultState)
         //drop
         val itemEntity = location.extent.createEntity(EntityTypes.ITEM, location.blockPosition)
         itemEntity.offer(Keys.REPRESENTED_ITEM, ItemStack.of(blockType, 1).createSnapshot())
-        location.extent.spawnEntity(itemEntity, Cause.source(this@ClaimBlocks).build())
+        location.extent.spawnEntity(itemEntity)
     }
 
     private fun loadClaimManager(): Boolean {
@@ -316,7 +316,6 @@ class ClaimBlocks @Inject constructor(
 
         if (Sponge.getPluginManager().getPlugin(GRIEF_PREVENTION_ID).isPresent) {
             claimManager = GriefPreventionClaimManager(
-                    pluginContainer,
                     getServiceOrFail(GriefPreventionApi::class),
                     doesConsumeClaimBlocks = { config.consumeClaimBlocks },
                     getInsufficientGriefPreventionClaimBlocksText = { messages.insufficientGriefPreventionClaimBlocks },
